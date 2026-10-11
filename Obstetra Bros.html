@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Obstetra Bros</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#fdf2f8;--fg:#4a1d3a;--bt:#be185d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1020;--fg:#fce7f3;--bt:#db2777}}
+:root[data-theme="dark"]{--bg:#1f1020;--fg:#fce7f3;--bt:#db2777}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;padding:8px;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;text-align:center}
+h1{font-size:20px;margin:4px 0}
+canvas{width:100%;max-width:900px;display:block;margin:0 auto;border-radius:12px;touch-action:none;background:#fbcfe8}
+.pad{display:flex;justify-content:center;gap:12px;margin:10px 0}
+.pad button{width:80px;height:60px;font-size:26px;border:0;border-radius:14px;background:var(--bt);color:#fff;touch-action:none;user-select:none}
+p{font-size:13px;opacity:.8;margin:4px}
+</style></head><body>
+<h1>👩‍⚕️ Obstetra Bros</h1>
+<canvas id="c" width="800" height="450"></canvas>
+<div class="pad"><button id="bl">◀</button><button id="br">▶</button><button id="bj">⬆</button></div>
+<p>Flechas / A D para moverte · Espacio o ↑ para saltar · Salta sobre los enemigos y golpea los bloques ❓ desde abajo</p>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+const L=[
+{n:'Nivel 1: Control Prenatal',s:'#fbcfe8',g:'#16a34a',f:'#9d174d',w:2400,
+p:[[0,400,650],[760,400,500],[1380,400,1020],[250,310,110],[520,250,110],[900,300,130],[1150,240,110],[1650,310,150],[1950,250,120]],
+i:[[280,270,'💊'],[550,210,'💊'],[930,260,'🩺'],[1180,200,'💊'],[1680,270,'🩺'],[1980,210,'💊'],[100,360,'💊'],[1500,360,'🩺']],
+e:[[450,364,300,640,'🦠'],[900,364,780,1240,'🦠'],[1550,364,1400,1900,'🦠'],[2150,364,2000,2350,'🦠']],
+q:[[420,270,'El ácido fólico previene defectos del tubo neural. Debe iniciarse antes de la concepción.'],[1500,270,'En Perú se considera gestante controlada con al menos 6 controles prenatales.'],[2200,270,'Medir la presión arterial en cada control ayuda a detectar preeclampsia a tiempo.']]},
+{n:'Nivel 2: Sala de Partos',s:'#e9d5ff',g:'#7c3aed',f:'#5b21b6',w:2800,
+p:[[0,400,500],[620,400,300],[1040,400,300],[1460,400,400],[1980,400,820],[200,300,110],[700,300,110],[1100,290,110],[1500,300,120],[1750,230,110],[2100,300,120],[2400,260,120]],
+i:[[230,260,'🧤'],[730,260,'💉'],[1130,250,'🧤'],[1530,260,'💉'],[1780,190,'🧤'],[2130,260,'💉'],[2430,220,'🧤']],
+e:[[300,364,100,480,'🦠'],[700,364,630,900,'🩸'],[1150,364,1050,1330,'🦠'],[1600,364,1470,1850,'🩸'],[2100,364,1990,2500,'🩸'],[2600,364,2500,2780,'🦠']],
+q:[[380,270,'El partograma registra la evolución del trabajo de parto y alerta sobre complicaciones.'],[1280,270,'El contacto piel con piel inmediato favorece el vínculo y la lactancia materna.'],[2250,270,'El manejo activo del alumbramiento con oxitocina previene la hemorragia postparto.']]},
+{n:'Nivel 3: Emergencia Obstétrica',s:'#1e3a8a',g:'#0f766e',f:'#115e59',w:3200,
+p:[[0,400,400],[520,400,260],[900,400,260],[1300,400,260],[1700,400,300],[2140,400,300],[2580,400,620],[300,300,100],[620,290,100],[1000,290,100],[1400,290,100],[1850,300,100],[2250,290,100],[2700,280,120]],
+i:[[330,260,'💉'],[650,250,'🩺'],[1030,250,'💉'],[1430,250,'🩺'],[1880,260,'💉'],[2280,250,'🩺'],[2730,240,'💉']],
+e:[[200,364,50,380,'🩸'],[600,364,530,770,'🌡️'],[950,364,910,1150,'🩸'],[1350,364,1310,1550,'🌡️'],[1800,364,1710,1990,'🩸'],[2250,364,2150,2430,'🌡️'],[2800,364,2590,3100,'🩸']],
+q:[[150,270,'Preeclampsia: PA ≥140/90 después de las 20 semanas. El sulfato de magnesio previene la eclampsia.'],[1330,270,'La hemorragia postparto es una de las principales causas de muerte materna: ¡actúa rápido!'],[2950,270,'Lactancia exclusiva los primeros 6 meses: el mejor inicio de vida para el bebé.']]}
+];
+let st='menu',lv=0,sc=0,vi=3,P,pl,it,en,goal,tip='',tt=0,cam=0,k={l:0,r:0,j:0},got=0,fr=0;
+function load(){const d=L[lv];P={x:40,y:300,w:26,h:36,vx:0,vy:0,g:0,d:1};
+pl=d.p.map(a=>({x:a[0],y:a[1],w:a[2],h:a[1]<400?18:80}));
+d.q.forEach(a=>pl.push({x:a[0],y:a[1],w:34,h:34,t:a[2],u:0}));
+it=d.i.map(a=>({x:a[0],y:a[1],e:a[2],on:1}));
+en=d.e.map(a=>({x:a[0],y:a[1],a:a[2],b:a[3],e:a[4],d:1,on:1}));
+goal=d.w-90;tip='';tt=0;got=0}
+function hit(h){pl.forEach(o=>{if(P.x<o.x+o.w&&P.x+P.w>o.x&&P.y<o.y+o.h&&P.y+P.h>o.y){
+if(h){P.x=P.vx>0?o.x-P.w:o.x+o.w}
+else if(P.vy>0){P.y=o.y-P.h;P.vy=0;P.g=1}
+else{P.y=o.y+o.h;P.vy=0;if(o.t&&!o.u){o.u=1;sc+=50;tip=o.t;tt=420}}}})}
+function die(){vi--;if(vi<=0)st='over';else load()}
+function ov(a,b,s){return Math.abs(a.x-b.x)<s&&Math.abs(a.y-b.y)<s}
+function step(){const d=L[lv];fr++;
+P.vx=(k.r-k.l)*4;if(P.vx)P.d=P.vx>0?1:-1;
+if(k.j&&P.g){P.vy=-12.5;P.g=0}
+P.vy+=.6;P.x+=P.vx;hit(1);P.x=Math.max(0,Math.min(d.w-P.w,P.x));
+P.g=0;P.y+=P.vy;hit(0);
+if(P.y>520){die();return}
+it.forEach(i=>{if(i.on&&ov({x:P.x+13,y:P.y+18},{x:i.x+14,y:i.y+14},26)){i.on=0;sc+=10;got++}});
+en.forEach(e=>{if(!e.on)return;e.x+=e.d*1.3;if(e.x<e.a||e.x>e.b)e.d*=-1;
+if(P.x<e.x+30&&P.x+P.w>e.x&&P.y<e.y+30&&P.y+P.h>e.y){
+if(P.vy>0&&P.y+P.h-e.y<22){e.on=0;P.vy=-8;sc+=100}else{die()}}});
+if(tt>0)tt--;
+cam=Math.max(0,Math.min(d.w-800,P.x-300));
+if(P.x>goal){sc+=200;lv++;st=lv>=L.length?'win':'next';if(st=='next')load()}}
+function wrap(t,px,py,w,lh){let l='';t.split(' ').forEach(wd=>{if(x.measureText(l+wd).width>w){x.fillText(l,px,py);py+=lh;l=''}l+=wd+' '});x.fillText(l,px,py)}
+function scr(t,s,b){x.fillStyle='rgba(30,10,40,.82)';x.fillRect(0,0,800,450);x.fillStyle='#fff';x.textAlign='center';
+x.font='bold 38px system-ui';x.fillText(t,400,170);x.font='20px system-ui';x.fillText(s,400,225);x.fillStyle='#fbbf24';x.fillText(b,400,300);x.textAlign='left'}
+function draw(){const d=L[lv<L.length?lv:L.length-1];
+x.fillStyle=d.s;x.fillRect(0,0,800,450);
+x.font='40px serif';x.globalAlpha=.5;for(let i=0;i<8;i++)x.fillText('☁️',((i*320-cam*.3)%1000+1000)%1000-100,60+(i%3)*50);x.globalAlpha=1;
+if(st=='menu'){scr('👩‍⚕️ Obstetra Bros','Rescata al bebé 👶 en cada nivel, evita infecciones, hemorragias y fiebre','Toca o presiona Espacio para empezar');return}
+x.save();x.translate(-cam,0);
+pl.forEach(o=>{if(o.t){x.fillStyle=o.u?'#a8a29e':'#fbbf24';x.fillRect(o.x,o.y,34,34);x.fillStyle='#78350f';x.font='bold 22px system-ui';x.fillText(o.u?'✓':'?',o.x+10,o.y+25)}
+else{x.fillStyle=o.h>20?d.f:d.g;x.fillRect(o.x,o.y,o.w,o.h);x.fillStyle=d.g;x.fillRect(o.x,o.y,o.w,8)}});
+x.font='28px serif';
+it.forEach(i=>{if(i.on)x.fillText(i.e,i.x,i.y+26+Math.sin(fr/10+i.x)*3)});
+en.forEach(e=>{if(e.on)x.fillText(e.e,e.x,e.y+28)});
+x.font='40px serif';x.fillText('👶',goal,396);x.font='28px serif';x.fillText('🏁',goal+40,396);
+x.save();x.translate(P.x+13,0);x.scale(P.d,1);x.font='34px serif';x.fillText('👩‍⚕️',-17,P.y+32);x.restore();
+x.restore();
+x.fillStyle='rgba(0,0,0,.45)';x.fillRect(0,0,800,34);x.fillStyle='#fff';x.font='bold 16px system-ui';
+x.fillText(d.n,10,23);x.fillText('❤️ '+vi+'   ⭐ '+sc+'   💊 '+got,560,23);
+if(tt>0){x.fillStyle='rgba(255,251,235,.95)';x.fillRect(40,370,720,64);x.fillStyle='#78350f';x.font='15px system-ui';wrap('📘 '+tip,56,395,690,20)}
+if(st=='next')scr('¡Nivel completado! 🎉','Puntaje: '+sc,'Toca o presiona Espacio para continuar');
+if(st=='over')scr('Fin del turno 😵','Puntaje: '+sc,'Toca o presiona Espacio para reintentar');
+if(st=='win')scr('¡Felicidades, Obstetra! 🎓','Rescataste a todos los bebés. Puntaje final: '+sc,'Toca o presiona Espacio para jugar de nuevo')}
+function act(){if(st=='menu'||st=='over'||st=='win'){lv=st=='win'||st=='over'?0:lv;if(st!='menu'){sc=0}vi=3;load();st='play'}else if(st=='next')st='play'}
+function loop(){if(st=='play')step();draw();requestAnimationFrame(loop)}
+const km={ArrowLeft:'l',a:'l',ArrowRight:'r',d:'r',ArrowUp:'j',w:'j',' ':'j'};
+addEventListener('keydown',e=>{if(km[e.key]){e.preventDefault();k[km[e.key]]=1;if(e.key==' ')act()}});
+addEventListener('keyup',e=>{if(km[e.key])k[km[e.key]]=0});
+c.addEventListener('pointerdown',act);
+[['bl','l'],['br','r'],['bj','j']].forEach(([id,n])=>{const b=document.getElementById(id);
+b.addEventListener('pointerdown',e=>{e.preventDefault();k[n]=1;act()});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>k[n]=0))});
+load();loop();
+</script></body></html>
